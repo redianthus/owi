@@ -13,6 +13,7 @@
   binary_validate
   choice_intf
   call_graph
+  cfg
   cmd_utils
   cmd_c
   cmd_call_graph
