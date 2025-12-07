@@ -3,6 +3,43 @@
   }) {}
 }:
 
+let
+  mysmtml = pkgs.ocamlPackages.buildDunePackage (finalAttrs: {
+    pname = "smtml";
+    version = "0.13.0";
+
+  src = pkgs.fetchgit {
+    url = "https://github.com/formalsec/smtml";
+    branchName = "filipe/issue-471";
+    rev = "8f6a6bea75560de7a4b0b7de3713513969a66590";
+    hash = "sha256-8B8vXz/QGeQ4xnX5tcHiTrWjEY5jd0SI1lY+SyOZx9E=";
+  };
+
+  nativeBuildInputs = with pkgs.ocamlPackages; [
+    menhir
+  ];
+
+  propagatedBuildInputs = with pkgs.ocamlPackages; [
+    bos
+    cmdliner
+    dolmen_model
+    dolmen_type
+    dune-build-info
+    fpath
+    hc
+    menhirLib
+    mtime
+    ocaml_intrinsics
+    patricia-tree
+    prelude
+    scfg
+    yojson
+    z3
+    zarith
+  ];
+  });
+in
+
 pkgs.mkShell {
   name = "owi-dev-shell";
   dontDetectOcamlConflicts = true;
@@ -48,7 +85,7 @@ pkgs.mkShell {
     prelude
     processor
     scfg
-    smtml
+    mysmtml
     synchronizer
     uutf
     xmlm
