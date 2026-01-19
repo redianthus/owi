@@ -2,36 +2,31 @@
 module M = Scheduler.Schedulable
 
 (* TODO:
-  we could use a CPS version of the state monad which could be much more efficient in hot paths, something like:
+   we could use a CPS version of the state monad which could be much more efficient in hot paths, something like:
 
-  type ('a, s') state =
+   type ('a, s') state =
     's -> ('a -> 's -> 'r) -> 'r
 
-  let return x =
+   let return x =
     fun s k ->
       k x s
 
-  let bind m f =
+   let bind m f =
     fun s k ->
       m s (fun x s -> f x s k)
-  *)
-type ('a, 's) t = 's -> ('a * 's) M.t
+*)
 
-let[@inline] run mxf st = mxf st
+type ('a, 's) t = { run : 'r. ('a -> 's -> 'r M.t) -> 's -> 'r M.t } [@@unboxed]
 
-let[@inline] return x = fun st -> M.return (x, st)
+let[@inline] run mxf st = mxf.run (fun a _st -> M.return a) st
+
+let[@inline] return x = { run = (fun k st -> k x st) }
 
 let[@inline] lift (x : 'a M.t) : ('a, 's) t =
- fun (st : 's) ->
-  let ( let+ ) = M.( let+ ) in
-  let+ x in
-  (x, st)
+  { run = (fun k st -> M.bind x (fun x -> k x st)) }
 
 let[@inline] bind mx f =
- fun st ->
-  let ( let* ) = M.( let* ) in
-  let* x, new_st = run mx st in
-  run (f x) new_st
+  { run = (fun k st -> mx.run (fun x new_st -> (f x).run k new_st) st) }
 
 let[@inline] ( let* ) mx f = bind mx f
 
@@ -41,16 +36,15 @@ let[@inline] map x f =
 
 let[@inline] ( let+ ) x f = map x f
 
-let[@inline] liftF2 f x y = fun st -> f (run x st) (run y st)
+let[@inline] liftF2 f x y =
+  let ( let* ) = M.( let* ) in
+  { run =
+      (fun k st ->
+        let* fx = run x st in
+        let* fy = run y st in
+        k ((f fx) fy) st )
+  }
 
-let[@inline] with_state f = fun st -> M.return (f st)
+let[@inline] with_state f = { run = (fun k st -> k (f st) st) }
 
-let[@inline] modify_state f = fun st -> M.return ((), f st)
-
-let[@inline] project_state (project_and_backup : 'st1 -> 'st2 * 'backup) restore
-  other =
- fun st ->
-  let ( let+ ) = M.( let+ ) in
-  let proj, backup = project_and_backup st in
-  let+ res, new_state = run other proj in
-  (res, restore backup new_state)
+let[@inline] modify_state f = { run = (fun k st -> k () (f st)) }

@@ -37,7 +37,7 @@ let lift_schedulable (v : 'a Scheduler.Schedulable.t) : 'a t =
   Eval_monad.lift v
 
 let with_thread (f : Thread.t -> 'a) : 'a t =
-  let x = State_monad.with_state (fun st -> (f st, st)) in
+  let x = State_monad.with_state f in
   Eval_monad.lift x
 
 let thread = with_thread Fun.id
@@ -56,6 +56,7 @@ let choose a b =
     let* () = modify_thread (fun (_ : Thread.t) -> new_thread) in
     b
   in
+  let b = State_monad.lift b in
   State_monad.liftF2 Scheduler.Schedulable.choose a b
 
 let yield prio = lift_schedulable @@ Scheduler.Schedulable.yield prio
