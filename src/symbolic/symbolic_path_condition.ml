@@ -25,10 +25,12 @@ let add_one (condition : Smtml.Expr.t) pc : t =
     in
     pc
   | [] ->
+    Log.err (fun m -> m "Expression not simplified: %a" Smtml.Expr.pp condition);
     (* It means smtml did not properly simplified an expression! *)
     assert false
 
 let add (condition : Symbolic_boolean.t) (pc : t) : t =
+  Log.err (fun m -> m "Adding: %a" Smtml.Typed.Bool.pp condition);
   (* we start by splitting the condition ((P & Q) & R) into a set {P; Q; R} before adding each of P, Q and R into the UF data structure, this way we maximize the independence of the PC *)
   let condition = Symbolic_boolean.to_expr condition in
   let splitted_condition = Smtml.Expr.split_conjunctions condition in

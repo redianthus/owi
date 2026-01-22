@@ -83,6 +83,7 @@ let run exploration_strategy ~workers solver t thread ~at_worker_value
       ~finally:at_worker_end )
 
 let add_pc (c : Symbolic_boolean.t) =
+  Log.err (fun m -> m "simplifying expression: %a" Smtml.Typed.Bool.pp c);
   let c = Smtml.Typed.simplify c in
   match Smtml.Typed.view c with
   | Val True -> return ()
