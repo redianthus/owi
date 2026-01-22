@@ -367,8 +367,8 @@ owi: [ERROR] Reached problem!
 $ owi rust ./mean.rs --entry-point=check --invoke-with-symbols -w1 --fail-on-assertion-only --no-assert-failure-expression-printing --deterministic-result-order
 owi: [ERROR] Assert failure
 model {
-  symbol symbol_0 i32 -1470102455
-  symbol symbol_1 i32 908070184
+  symbol symbol_0 i32 -697728544
+  symbol symbol_1 i32 -1047101921
 }
 
 owi: [ERROR] Reached problem!
