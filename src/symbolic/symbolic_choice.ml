@@ -61,8 +61,8 @@ let[@inline] choose (prio_a, a) (prio_b, b) : 'a t =
   let* choice =
     lift_schedulable
     @@ Scheduler.Schedulable.choose
-         (prio_a, fun () -> Scheduler.Schedulable.return a)
-         (prio_b, fun () -> Scheduler.Schedulable.return b)
+         (prio_a, Scheduler.Schedulable.return a)
+         (prio_b, Scheduler.Schedulable.return b)
   in
   choice
 
@@ -81,7 +81,7 @@ let run exploration_strategy ~workers solver t thread ~at_worker_value
   in
   let module Scheduler = Scheduler.Make (M) in
   let sched = Scheduler.init () in
-  Scheduler.add_init_task sched (Fun.const @@ State_monad.run t thread);
+  Scheduler.add_init_task sched (State_monad.run t thread);
   if workers > 1 then Logs_threaded.enable ();
   Array.init workers (fun _i ->
     Scheduler.spawn_worker sched ~at_worker_value ~at_worker_init
@@ -145,7 +145,6 @@ let check_reachability v =
   return reachability
 
 let get_model_or_stop symbol =
-  (* TODO: better prio here! *)
   let* thread in
   let solver = solver () in
   let set = thread.pc |> Symbolic_path_condition.slice_on_symbol symbol in

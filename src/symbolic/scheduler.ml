@@ -3,7 +3,7 @@ module Schedulable = struct
   type 'a t =
     | Stop
     | Now of 'a
-    | Choice of (Prio.metrics * (unit -> 'a t)) * (Prio.metrics * (unit -> 'a t))
+    | Choice of (Prio.metrics * 'a t) * (Prio.metrics * 'a t)
 
   let[@inline] return x : _ t = Now x
 
@@ -12,8 +12,8 @@ module Schedulable = struct
     | Stop -> Stop
     | Now v -> f v
     | Choice ((prio_a, a), (prio_b, b)) ->
-      let a = (prio_a, fun () -> bind (a ()) f) in
-      let b = (prio_b, fun () -> bind (b ()) f) in
+      let a = (prio_a, bind a f) in
+      let b = (prio_b, bind b f) in
       Choice (a, b)
 
   let[@inline] ( let* ) mx f = bind mx f
@@ -31,7 +31,7 @@ end
 
 module Make (Work_datastructure : Prio.S) = struct
   (* A scheduler for Schedulable values. *)
-  type 'a work_queue = (unit -> 'a Schedulable.t) Work_datastructure.t
+  type 'a work_queue = 'a Schedulable.t Work_datastructure.t
 
   type 'a t = { work_queue : 'a work_queue } [@@unboxed]
 
@@ -52,7 +52,7 @@ module Make (Work_datastructure : Prio.S) = struct
         write_back (prio_b, b)
     in
     Work_datastructure.work_while
-      (fun f write_back -> inner (f ()) write_back)
+      (fun f write_back -> inner f write_back)
       sched.work_queue
 
   let spawn_worker sched
