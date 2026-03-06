@@ -210,7 +210,7 @@ let solver =
   in
   Arg.(
     value
-    & opt solver_conv Smtml.Solver_type.Z3_solver
+    & opt solver_conv Smtml.Solver_type.Smtzilla_solver
     & info [ "solver"; "s" ] ~doc ~docv )
 
 let source_file =

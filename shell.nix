@@ -9,9 +9,10 @@ let
       src = pkgs.fetchFromGitHub {
         owner = "formalsec";
         repo = "smtml";
-        rev = "a9dff52e7ef2215c786ee8ce2c24d716db0b5ace";
-        hash = "sha256-TIOOE/bsis6oYV3Dt6TcI/r/aN3S1MQNtxDAnvBbVO0=";
+        rev = "11499e2628727de715e364ab059905589c71315a";
+        hash = "sha256-MzSHH276c6KHrwyaTJU10NI3MEkciLyMAzcVf5ox3ao=";
       };
+      propagatedBuildInputs = old.propagatedBuildInputs ++ [ ocamlPackages.dune-site ];
       doCheck = false;
     });
     symex = super.symex.overrideAttrs (old: {

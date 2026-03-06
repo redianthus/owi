@@ -602,8 +602,8 @@ We can now run Owi on our program to check if they are the same:
 $ owi c ./mean.c --entry-point=check --invoke-with-symbols --no-assert-failure-expression-printing
 owi: [ERROR] Assert failure
 model {
-  symbol symbol_0 i32 -1570748002
-  symbol symbol_1 i32 -1425538774
+  symbol symbol_0 i32 -1468059198
+  symbol symbol_1 i32 -785414597
 }
 owi: [ERROR] Reached problem!
 [13]
@@ -614,8 +614,8 @@ owi: [ERROR] Reached problem!
 $ owi c++ ./mean.cpp --entry-point=check --invoke-with-symbols --no-assert-failure-expression-printing
 owi: [ERROR] Assert failure
 model {
-  symbol symbol_0 i32 -1570748002
-  symbol symbol_1 i32 -1425538774
+  symbol symbol_0 i32 -1468059198
+  symbol symbol_1 i32 -785414597
 }
 owi: [ERROR] Reached problem!
 [13]
@@ -638,8 +638,8 @@ owi: [ERROR] Reached problem!
 $ owi rust ./mean.rs --entry-point=check --invoke-with-symbols -w1 --fail-on-assertion-only --no-assert-failure-expression-printing --deterministic-result-order
 owi: [ERROR] Assert failure
 model {
-  symbol symbol_0 i32 755812345
-  symbol symbol_1 i32 -755812346
+  symbol symbol_0 i32 -1078985399
+  symbol symbol_1 i32 1078985398
 }
 
 owi: [ERROR] Reached problem!
@@ -651,8 +651,8 @@ owi: [ERROR] Reached problem!
 $ owi zig ./mean.zig --entry-point=check --invoke-with-symbols -w1 --fail-on-assertion-only --no-assert-failure-expression-printing --deterministic-result-order
 owi: [ERROR] Assert failure
 model {
-  symbol symbol_0 i32 -1001584422
-  symbol symbol_1 i32 -72157403
+  symbol symbol_0 i32 -1744479010
+  symbol symbol_1 i32 601002353
 }
 
 owi: [ERROR] Reached problem!

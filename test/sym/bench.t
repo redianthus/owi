@@ -24,9 +24,10 @@
   owi: [INFO] path count: X
   owi: [INFO] max depth: X
   owi: [INFO] solver stats: ((added eqs  X)
+                             (arith-make-feasible  X)
+                             (arith-max-columns  X)
                              (bv bit X)
                              (bv dynamic diseqs  X)
-                             (bv->core eq  X)
                              (cache hits  X)
                              (cache hits ratio  X)
                              (cache misses  X)
@@ -55,9 +56,9 @@ Testing with the -q flag:
   owi: [INFO] interpreter loop time         : X
   owi: [INFO] path count: X
   owi: [INFO] max depth: X
-  owi: [INFO] solver stats: ((added eqs  X)
+  owi: [INFO] solver stats: ((arith-make-feasible  X)
+                             (arith-max-columns  X)
                              (bv dynamic diseqs  X)
-                             (bv->core eq  X)
                              (cache hits  X)
                              (cache hits ratio  X)
                              (cache misses  X)

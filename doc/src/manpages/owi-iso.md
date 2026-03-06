@@ -50,7 +50,7 @@ OPTIONS
        --no-worker-isolation
            Do not force each worker to run on an isolated physical core.
 
-       -s VALUE, --solver=VALUE (absent=Z3)
+       -s VALUE, --solver=VALUE (absent=SMTZilla)
            SMT solver to use. VALUE must be one of the 5 available solvers:
            Z3, Bitwuzla, Colibri2, cvc5, Alt-Ergo
 
