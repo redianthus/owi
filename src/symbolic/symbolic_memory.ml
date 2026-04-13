@@ -159,8 +159,7 @@ let load_32_unchecked m a : Smtml.Typed.Bitv32.t =
 let load_32 m a =
   let open Symbolic_choice in
   let+ a = must_be_valid_address m a 4 in
-  let v = load_32_unchecked m a in
-  Smtml.Typed.simplify v
+  load_32_unchecked m a
 
 let load_64 m a =
   let open Symbolic_choice in

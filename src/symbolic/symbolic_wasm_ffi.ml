@@ -141,8 +141,6 @@ module M :
   let cov_label_set m id ptr =
     let open Symbolic_choice in
     let open Smtml in
-    let id = Typed.simplify id in
-    let ptr = Typed.simplify ptr in
     match (Typed.view id, Typed.view ptr) with
     | Val (Bitv id), Val (Bitv ptr)
       when Bitvector.numbits id = 32 && Bitvector.numbits ptr = 32 ->

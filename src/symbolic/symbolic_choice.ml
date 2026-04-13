@@ -70,7 +70,6 @@ let assume condition =
 
 let select_inner ~with_breadcrumbs (condition : Symbolic_boolean.t)
   ~instr_counter_true ~instr_counter_false =
-  let condition = Smtml.Typed.simplify condition in
   match Smtml.Typed.view condition with
   | Val True -> return true
   | Val False -> return false
@@ -142,7 +141,6 @@ let get_model_or_prune symbol =
   | `Unknown -> if Solver.was_interrupted () then prune () else assert false
 
 let select_i32 (e : Symbolic_i32.t) : int32 t =
-  let e = Smtml.Typed.simplify e in
   match Smtml.Typed.view e with
   | Val (Bitv bv) when Smtml.Bitvector.numbits bv <= 32 ->
     return (Smtml.Bitvector.to_int32 bv)
