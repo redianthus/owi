@@ -6,23 +6,14 @@ open Syntax
 module Value = Concrete_value
 module Stack = Stack.Make [@inlined hint] (Value)
 
-type t =
-  | I32
-  | I64
-
 type bf =
   | Block
   | Loop
   | Func
 
-type bt =
-  { arg : t list
-  ; result : t list
-  }
-
 type l =
   { form : bf
-  ; ty : bt
+  ; ty : Binary.func_type
   ; code : Binary.expr
   }
 
@@ -86,17 +77,10 @@ end
 
 (*=========================================================================*)
 
-let pp_t fmt : t -> unit = function
-  | I32 -> Fmt.pf fmt "i32"
-  | I64 -> Fmt.pf fmt "i64"
-
 let pp_l fmt { form; ty; code } =
-  Fmt.pf fmt "(%s (%a)->(%a) %s)"
+  Fmt.pf fmt "(%s %a %s)"
     (match form with Block -> "b" | Loop -> "l" | Func -> "f")
-    (Fmt.list ~sep:(Fmt.any ", ") pp_t)
-    ty.arg
-    (Fmt.list ~sep:(Fmt.any ", ") pp_t)
-    ty.result
+    Binary.pp_func_type ty
     (if List.length code > 0 then "I" else "[]")
 
 let pp_map = Locals.pretty (fun fmt k v -> Fmt.pf fmt "%i->%a" k Value.pp v)
@@ -117,18 +101,6 @@ let rec input_loop state =
     input_loop state
 
 let option_get = function Some x -> x | None -> assert false [@@inline]
-
-let func_type_to_bt ((params, results) : Binary.func_type) =
-  let val_type_to_bt : Binary.val_type -> t = function
-    | Num_type Text.I32 -> I32
-    | Num_type Text.I64 -> I64
-    | Ref_type _ -> Fmt.failwith "we don't handle refs for now"
-    | _ -> Fmt.failwith "not handled yet"
-  in
-  let params = List.map snd params in
-  { arg = List.map val_type_to_bt params
-  ; result = List.map val_type_to_bt results
-  }
 
 (*=========================================================================*)
 
