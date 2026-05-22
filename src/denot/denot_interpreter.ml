@@ -18,7 +18,7 @@ type v =
   | I32 of int32
   | I64 of int64
 
-module Stack = Abs_stack.Make (struct
+module Stack = Abstract_stack.Make (struct
   type t = v
 end)
 

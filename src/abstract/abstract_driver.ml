@@ -3,9 +3,9 @@
 (* Written by the Owi programmers *)
 
 open Binary
-module Stack = Abs_stack.Make (Abs_value)
-module D = Abs_value.ADomain
-module Size = Abs_value.Size
+module Stack = Abstract_stack.Make (Abstract_value)
+module D = Abstract_value.ADomain
+module Size = Abstract_value.Size
 
 module Int = struct
   include Int
@@ -15,15 +15,15 @@ end
 
 module Locals = PatriciaTree.MakeMap (Int)
 
-type value = Abs_value.t
+type value = Abstract_value.t
 
 type state =
   { ctx : D.Context.t
   ; stack : Stack.t
   ; locals : value Locals.t
   ; func_rt : val_type list
-  ; env : Abs_extern_func.extern_func Link_env.t
-  ; envs : Abs_extern_func.extern_func Link_env.t Dynarray.t
+  ; env : Abstract_extern_func.extern_func Link_env.t
+  ; envs : Abstract_extern_func.extern_func Link_env.t Dynarray.t
   }
 
 let ( let* ) = Option.bind
@@ -34,9 +34,9 @@ let pp_state : Format.formatter -> state -> unit =
  fun fmt state ->
   Fmt.pf fmt "{@\n@[<hov 2>  ctx : %a,@;stack : %a,@;locals : %a@]@\n}"
     D.context_pretty state.ctx
-    (Stack.pp @@ Abs_value.pp state.ctx)
+    (Stack.pp @@ Abstract_value.pp state.ctx)
     state.stack
-    (Fmt.list ~sep:Fmt.semi (Abs_value.pp state.ctx))
+    (Fmt.list ~sep:Fmt.semi (Abstract_value.pp state.ctx))
     (Locals.to_list state.locals |> List.map snd)
 
 module type DATA_STATE = sig
@@ -105,21 +105,21 @@ module DenotFixpoint (S : DATA_STATE) = struct
    fun state_a state_b ->
     let gen_new_value ~widens a b state_a state_b
       (D.Context.Result (inc, intup, cont)) f =
-      if Abs_value.equal a b then None
+      if Abstract_value.equal a b then None
       else
-        let size = Abs_value.size_of a in
+        let size = Abstract_value.size_of a in
         (* inc : whether the new value is included in the old one
          * intup : symbolic repr of all variabls that will be created simultaneously
          * cont : continuation function
          *)
         let (D.Context.Result (inc, in_tup, local_cont)) =
-          D.serialize_binary ~size ~widens state_a.ctx (Abs_value.to_binary a)
-            state_b.ctx (Abs_value.to_binary b) (inc, intup)
+          D.serialize_binary ~size ~widens state_a.ctx (Abstract_value.to_binary a)
+            state_b.ctx (Abstract_value.to_binary b) (inc, intup)
         in
         let cont ctx out_tuple =
           let integer, out_tuple = local_cont ctx out_tuple in
           let list, out_tuple = cont ctx out_tuple in
-          let b = Abs_value.of_binary size integer in
+          let b = Abstract_value.of_binary size integer in
           (f b list, out_tuple)
         in
         Some (D.Context.Result (inc, in_tup, cont))
@@ -141,11 +141,11 @@ module DenotFixpoint (S : DATA_STATE) = struct
           let size =
             (* v1 and v2 should have the same size *)
             match v1 with
-            | Some v -> Abs_value.size_of v
+            | Some v -> Abstract_value.size_of v
             | None -> assert false
           in
-          let v1 = Option.value v1 ~default:(Abs_value.top size state_a.ctx) in
-          let v2 = Option.value v2 ~default:(Abs_value.top size state_b.ctx) in
+          let v1 = Option.value v1 ~default:(Abstract_value.top size state_a.ctx) in
+          let v2 = Option.value v2 ~default:(Abstract_value.top size state_b.ctx) in
           let f = Locals.add k in
           match gen_new_value ~widens v1 v2 state_a state_b res f with
           | Some res -> res
@@ -220,7 +220,7 @@ module DenotFixpoint (S : DATA_STATE) = struct
       in
       let zero = D.Binary_Forward.biconst ~size Z.zero state.ctx in
       match vt with
-      | Num_type I32 -> Abs_value.I32 zero
+      | Num_type I32 -> Abstract_value.I32 zero
       | Num_type I64 -> I64 zero
       | _ -> assert false
     in
@@ -296,7 +296,7 @@ module DenotFixpoint (S : DATA_STATE) = struct
       (Some new_state, mapping)
     | If_else (_, bt, expr_then, expr_else) ->
       let b, stack = Stack.pop state.stack in
-      let cond = Abs_value.to_boolean state.ctx b in
+      let cond = Abstract_value.to_boolean state.ctx b in
       let state_then, jt_true =
         let> ctx, _ = (D.assume state.ctx cond, JumpTarget.empty) in
         eval_instr { state with stack; ctx } (Block (None, bt, expr_then))
@@ -355,7 +355,7 @@ module DenotFixpoint (S : DATA_STATE) = struct
     | Br i -> (None, JumpTarget.of_list [ (I i, [ state ]) ])
     | Br_table (cases, default) ->
       let v, stack = Stack.pop state.stack in
-      let v_bin = Abs_value.to_binary v in
+      let v_bin = Abstract_value.to_binary v in
       let size = Size.b32 in
       let equals =
         let f acc i =
@@ -403,9 +403,9 @@ module DataState : DATA_STATE = struct
     (* TODO vérifier les overflows *)
     let binop stack size op =
       let e1, e2, stack = Stack.pop_2 stack in
-      let lhs, rhs = (Abs_value.to_binary e1, Abs_value.to_binary e2) in
+      let lhs, rhs = (Abstract_value.to_binary e1, Abstract_value.to_binary e2) in
       let bin_res = op lhs rhs in
-      let r = Abs_value.of_binary size bin_res in
+      let r = Abstract_value.of_binary size bin_res in
       let stack = Stack.push stack r in
       stack
 
@@ -440,7 +440,7 @@ module DataState : DATA_STATE = struct
   module Relop = struct
     let relop ?(not = None) state size op =
       let e1, e2, stack = Stack.pop_2 state.stack in
-      let lhs, rhs = (Abs_value.to_binary e1, Abs_value.to_binary e2) in
+      let lhs, rhs = (Abstract_value.to_binary e1, Abstract_value.to_binary e2) in
       let bool_res = op lhs rhs in
       let bool_res =
         match not with
@@ -450,7 +450,7 @@ module DataState : DATA_STATE = struct
             bool_res
         | None -> bool_res
       in
-      let r = Abs_value.of_boolean state.ctx size bool_res in
+      let r = Abstract_value.of_boolean state.ctx size bool_res in
       let stack = Stack.push stack r in
       stack
 
@@ -488,7 +488,7 @@ module DataState : DATA_STATE = struct
     match instr with
     | Const i ->
       let abs_i = D.Binary_Forward.biconst ~size (Z.of_int32 i) state.ctx in
-      let stack = Stack.push state.stack (Abs_value.I32 abs_i) in
+      let stack = Stack.push state.stack (Abstract_value.I32 abs_i) in
       { state with stack }
     | Add -> Binop.add state size
     | Sub -> Binop.sub state size
@@ -509,7 +509,7 @@ module DataState : DATA_STATE = struct
       let abs_i =
         D.Binary_Forward.biconst ~size:Size.b64 (Z.of_int64 i) state.ctx
       in
-      let stack = Stack.push state.stack (Abs_value.I32 abs_i) in
+      let stack = Stack.push state.stack (Abstract_value.I32 abs_i) in
       { state with stack }
     | Add -> Binop.add state size
     | Sub -> Binop.sub state size
@@ -561,8 +561,8 @@ end
 
 module ConcreteFixpoint = DenotFixpoint (DataState)
 
-let expr (link_state : Abs_extern_func.extern_func Link.State.t)
-  (m : Abs_extern_func.extern_func Linked.Module.t) =
+let expr (link_state : Abstract_extern_func.extern_func Link.State.t)
+  (m : Abstract_extern_func.extern_func Linked.Module.t) =
   let envs = Link.State.get_envs link_state in
   let ctx = D.root_context () in
   let initial_state =

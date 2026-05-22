@@ -9,13 +9,13 @@
 module M = struct
   (* let symbol_i32 () = *)
   (*   Ok *)
-  (*     (Abs_value.ADomain.binary_unknown ~size:Units.In_bits.s32 *)
-  (*        (Abs_value.ADomain.root_context ()) ) *)
+  (*     (Abstract_value.ADomain.binary_unknown ~size:Units.In_bits.s32 *)
+  (*        (Abstract_value.ADomain.root_context ()) ) *)
 end
 
 (* open M *)
-(* open Abs_extern_func *)
-(* open Abs_extern_func.Syntax *)
+(* open Abstract_extern_func *)
+(* open Abstract_extern_func.Syntax *)
 
 let symbolic_extern_module =
   let functions =
@@ -24,4 +24,4 @@ let symbolic_extern_module =
       (* ; ("assert", Extern_func (i32 ^->. unit, assert')) *)
       (* ; ("exit", Extern_func (i32 ^->. unit, exit)) *) ]
   in
-  { Extern.Module.functions; func_type = Abs_extern_func.extern_type }
+  { Extern.Module.functions; func_type = Abstract_extern_func.extern_type }
