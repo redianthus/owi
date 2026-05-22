@@ -1,3 +1,7 @@
+(* SPDX-License-Identifier: AGPL-3.0-or-later *)
+(* Copyright © 2021-2026 OCamlPro *)
+(* Written by the Owi programmers *)
+
 module Terms =
   Terms.Builder.Make (Terms.Condition.ConditionCudd) (Terms.Relations.Equality)
     ()
@@ -45,15 +49,15 @@ let of_binary size binary =
 let of_boolean ctx size boolean =
   let true_ = ADomain.Boolean_Forward.true_ ctx in
   if ADomain.Boolean.equal boolean true_ then
-    (match Units.In_bits.to_int size with
-    | 32 -> I32(ADomain.Binary_Forward.biconst ~size (Z.of_int32 1l) ctx)
-    | 64 -> I64(ADomain.Binary_Forward.biconst ~size (Z.of_int64 1L) ctx)
-    | _ -> assert false)
+    match Units.In_bits.to_int size with
+    | 32 -> I32 (ADomain.Binary_Forward.biconst ~size (Z.of_int32 1l) ctx)
+    | 64 -> I64 (ADomain.Binary_Forward.biconst ~size (Z.of_int64 1L) ctx)
+    | _ -> assert false
   else
-    (match Units.In_bits.to_int size with
-    | 32 -> I32(ADomain.Binary_Forward.biconst ~size (Z.of_int32 1l) ctx)
-    | 64 -> I64(ADomain.Binary_Forward.biconst ~size (Z.of_int64 1L) ctx)
-    | _ -> assert false)
+    match Units.In_bits.to_int size with
+    | 32 -> I32 (ADomain.Binary_Forward.biconst ~size (Z.of_int32 1l) ctx)
+    | 64 -> I64 (ADomain.Binary_Forward.biconst ~size (Z.of_int64 1L) ctx)
+    | _ -> assert false
 
 let size_of = function I32 _ -> Size.b32 | I64 _ -> Size.b64
 
@@ -63,4 +67,3 @@ let to_boolean ctx x =
   ADomain.Binary_Forward.beq ~size ctx (to_binary x) zero
 
 let top size ctx = of_binary size @@ ADomain.binary_empty ~size ctx
-
