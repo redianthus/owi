@@ -3,6 +3,8 @@
 (* Written by the Owi programmers *)
 
 open Syntax
+module Value = Concrete_value
+module Stack = Stack.Make [@inlined hint] (Value)
 
 module Int = struct
   include Int
@@ -13,14 +15,6 @@ end
 type t =
   | I32
   | I64
-
-type v =
-  | I32 of int32
-  | I64 of int64
-
-module Stack = Abstract_stack.Make (struct
-  type t = v
-end)
 
 type sigma = Stack.t
 
@@ -42,7 +36,7 @@ type l =
 
 module Locals = PatriciaTree.MakeMap (Int)
 
-type e = v Locals.t
+type e = Value.t Locals.t
 
 type state = sigma * e
 
@@ -109,15 +103,11 @@ let pp_l fmt { form; ty; code } =
     ty.result
     (if List.length code > 0 then "I" else "[]")
 
-let pp_v fmt = function
-  | I32 i -> Fmt.pf fmt "(i32 %ld)" i
-  | I64 i -> Fmt.pf fmt "(i64 %Ld)" i
-
-let pp_map = Locals.pretty (fun fmt k v -> Fmt.pf fmt "%i->%a" k pp_v v)
+let pp_map = Locals.pretty (fun fmt k v -> Fmt.pf fmt "%i->%a" k Value.pp v)
 
 let print_state (state : state) =
   let sigma, rho = state in
-  Fmt.pr "@[<hov>σ:[%a];@;ρ:%a@]@." (Stack.pp pp_v) sigma pp_map rho
+  Fmt.pr "@[<hov>σ:[%a];@;ρ:%a@]@." Stack.pp sigma pp_map rho
 
 let rec input_loop state =
   match In_channel.input_line In_channel.stdin with
@@ -147,10 +137,9 @@ let func_type_to_bt ((params, results) : Binary.func_type) =
 (*=========================================================================*)
 
 let i32_binop stack op =
-  let v1, v2, stack = Stack.pop_2 stack in
-  match (v1, v2) with
-  | I32 i1, I32 i2 -> Stack.push stack (I32 (op i1 i2))
-  | _ -> assert false
+  let (i1, i2), stack = Stack.pop2_i32 stack in
+  let v = op i1 i2 in
+  Stack.push_i32 stack v
 
 let eval_i32 (sigma, rho) : Binary.i32_instr -> _ = function
   | Binary.Const i ->
@@ -165,10 +154,9 @@ let eval_i32 (sigma, rho) : Binary.i32_instr -> _ = function
   | _ -> assert false
 
 let i64_binop stack op =
-  let v1, v2, stack = Stack.pop_2 stack in
-  match (v1, v2) with
-  | I64 i1, I64 i2 -> Stack.push stack (I64 (op i1 i2))
-  | _ -> assert false
+  let (i1, i2), stack = Stack.pop2_i64 stack in
+  let v = op i1 i2 in
+  Stack.push_i64 stack v
 
 let eval_i64 (sigma, rho) : Binary.i64_instr -> _ = function
   | Binary.Const i ->
