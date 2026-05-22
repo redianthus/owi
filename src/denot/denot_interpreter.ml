@@ -6,17 +6,9 @@ open Syntax
 module Value = Concrete_value
 module Stack = Stack.Make [@inlined hint] (Value)
 
-module Int = struct
-  include Int
-
-  let to_int = Fun.id
-end
-
 type t =
   | I32
   | I64
-
-type sigma = Stack.t
 
 type bf =
   | Block
@@ -34,11 +26,15 @@ type l =
   ; code : Binary.expr
   }
 
-module Locals = PatriciaTree.MakeMap (Int)
+module Locals = PatriciaTree.MakeMap (struct
+  include Int
+
+  let to_int i = i
+end)
 
 type e = Value.t Locals.t
 
-type state = sigma * e
+type state = Stack.t * e
 
 module JumpKey = struct
   (* TODO c'est mieux de définir le type nous même *)
@@ -106,8 +102,8 @@ let pp_l fmt { form; ty; code } =
 let pp_map = Locals.pretty (fun fmt k v -> Fmt.pf fmt "%i->%a" k Value.pp v)
 
 let print_state (state : state) =
-  let sigma, rho = state in
-  Fmt.pr "@[<hov>σ:[%a];@;ρ:%a@]@." Stack.pp sigma pp_map rho
+  let stack, rho = state in
+  Fmt.pr "@[<hov>σ:[%a];@;ρ:%a@]@." Stack.pp stack pp_map rho
 
 let rec input_loop state =
   match In_channel.input_line In_channel.stdin with
@@ -141,16 +137,16 @@ let i32_binop stack op =
   let v = op i1 i2 in
   Stack.push_i32 stack v
 
-let eval_i32 (sigma, rho) : Binary.i32_instr -> _ = function
+let eval_i32 (stack, rho) : Binary.i32_instr -> _ = function
   | Binary.Const i ->
-    let sigma = Stack.push sigma (I32 i) in
-    (sigma, rho)
+    let stack = Stack.push stack (I32 i) in
+    (stack, rho)
   | Add ->
-    let sigma = i32_binop sigma Int32.add in
-    (sigma, rho)
+    let stack = i32_binop stack Int32.add in
+    (stack, rho)
   | Sub ->
-    let sigma = i32_binop sigma Int32.sub in
-    (sigma, rho)
+    let stack = i32_binop stack Int32.sub in
+    (stack, rho)
   | _ -> assert false
 
 let i64_binop stack op =
@@ -158,32 +154,32 @@ let i64_binop stack op =
   let v = op i1 i2 in
   Stack.push_i64 stack v
 
-let eval_i64 (sigma, rho) : Binary.i64_instr -> _ = function
+let eval_i64 (stack, rho) : Binary.i64_instr -> _ = function
   | Binary.Const i ->
-    let sigma = Stack.push sigma (I64 i) in
-    (sigma, rho)
+    let stack = Stack.push stack (I64 i) in
+    (stack, rho)
   | Add ->
-    let sigma = i64_binop sigma Int64.add in
-    (sigma, rho)
+    let stack = i64_binop stack Int64.add in
+    (stack, rho)
   | Sub ->
-    let sigma = i64_binop sigma Int64.sub in
-    (sigma, rho)
+    let stack = i64_binop stack Int64.sub in
+    (stack, rho)
   | _ -> assert false
 
-let eval_local (sigma, rho) : Binary.local_instr -> _ = function
+let eval_local (stack, rho) : Binary.local_instr -> _ = function
   | Get i -> (
     match Locals.find_opt i rho with
     | None -> Fmt.failwith "local.get: local %i is not set" i
-    | Some v -> (v :: sigma, rho) )
+    | Some v -> (v :: stack, rho) )
   | Set i ->
-    let v, sigma = Stack.pop sigma in
+    let v, stack = Stack.pop stack in
     let rho = Locals.add i v rho in
-    (sigma, rho)
+    (stack, rho)
   | Tee i ->
-    let v, sigma = Stack.pop sigma in
+    let v, stack = Stack.pop stack in
     let rho = Locals.add i v rho in
-    let sigma = Stack.push sigma v in
-    (sigma, rho)
+    let stack = Stack.push stack v in
+    (stack, rho)
 
 let join lhs rhs = match rhs with Some x -> Some x | None -> lhs
 
@@ -206,13 +202,13 @@ let rec eval_expr :
 
 and eval_instr : state -> Binary.instr -> state option * state JumpTarget.t =
  fun state instr ->
-  let sigma, rho = state in
+  let stack, rho = state in
   match instr with
   | Binary.I32 instr -> (Some (eval_i32 state instr), JumpTarget.empty)
   | Binary.I64 instr -> (Some (eval_i64 state instr), JumpTarget.empty)
   | Drop ->
-    let _, sigma = Stack.pop sigma in
-    (Some (sigma, rho), JumpTarget.empty)
+    let _, stack = Stack.pop stack in
+    (Some (stack, rho), JumpTarget.empty)
   | Unreachable -> (None, JumpTarget.empty)
   | Block (_str_opt, _bt, body) ->
     let res, mapping = eval_expr state body.raw in
@@ -221,20 +217,20 @@ and eval_instr : state -> Binary.instr -> state option * state JumpTarget.t =
     (s, m_decr)
   | Loop (_str_opt, _bt, _block_instrs) -> assert false
   | If_else (str_opt, bt, expr_then, expr_else) -> (
-    let v, sigma = Stack.pop sigma in
+    let v, stack = Stack.pop stack in
     match v with
-    | I32 0l -> eval_instr (sigma, rho) (Block (str_opt, bt, expr_else))
-    | _ -> eval_instr (sigma, rho) (Block (str_opt, bt, expr_then)) )
+    | I32 0l -> eval_instr (stack, rho) (Block (str_opt, bt, expr_else))
+    | _ -> eval_instr (stack, rho) (Block (str_opt, bt, expr_then)) )
   | Br i -> (None, JumpTarget.of_list [ (I i, state) ])
   | Br_if id -> (
-    let v, sigma = Stack.pop sigma in
+    let v, stack = Stack.pop stack in
     match v with
-    | I32 0l -> (Some (sigma, rho), JumpTarget.empty)
+    | I32 0l -> (Some (stack, rho), JumpTarget.empty)
     | _ ->
       (* br i *)
       (None, JumpTarget.of_list [ (I id, state) ]) )
   | Br_table (cases, default) ->
-    let v, sigma = Stack.pop sigma in
+    let v, stack = Stack.pop stack in
     let v_int =
       match v with
       (* br_table works only on int32 *)
@@ -243,7 +239,7 @@ and eval_instr : state -> Binary.instr -> state option * state JumpTarget.t =
     in
     let matched = Array.find_index (fun case -> case = v_int) cases in
     let jt = match matched with Some i -> i | None -> default in
-    (None, JumpTarget.of_list [ (I jt, (sigma, rho)) ])
+    (None, JumpTarget.of_list [ (I jt, (stack, rho)) ])
   | Return -> (None, JumpTarget.of_list [ (Ret, state) ])
   | instr ->
     Fmt.failwith "TODO implement instr %a@\n"
