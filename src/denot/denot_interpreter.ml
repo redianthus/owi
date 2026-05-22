@@ -23,25 +23,37 @@ module Locals = PatriciaTree.MakeMap (struct
   let to_int i = i
 end)
 
-type e = Value.t Locals.t
+module State = struct
+  type t = Stack.t * Value.t Locals.t
 
-type state = Stack.t * e
+  let pp_l fmt { form; ty; code } =
+    Fmt.pf fmt "(%s %a %s)"
+      (match form with Block -> "b" | Loop -> "l" | Func -> "f")
+      Binary.pp_func_type ty
+      (if List.length code > 0 then "I" else "[]")
 
-module JumpKey = struct
-  (* TODO c'est mieux de définir le type nous même *)
-  type t =
-    | I of int
-    | Ret
+  let pp_map = Locals.pretty (fun fmt k v -> Fmt.pf fmt "%i->%a" k Value.pp v)
 
-  let map : (int -> int) -> t -> t =
-   fun f key -> match key with I i -> I (f i) | Ret -> Ret
-
-  let decr = map Int.pred
-
-  let to_int = function I i -> i | Ret -> -1
+  let pp ppf (state : t) =
+    let stack, rho = state in
+    Fmt.pf ppf "@[<hov>σ:[%a];@;ρ:%a@]@." Stack.pp stack pp_map rho
 end
 
 module JumpTarget = struct
+  module JumpKey = struct
+    (* TODO c'est mieux de définir le type nous même *)
+    type t =
+      | I of int
+      | Ret
+
+    let map : (int -> int) -> t -> t =
+     fun f key -> match key with I i -> I (f i) | Ret -> Ret
+
+    let decr = map Int.pred
+
+    let to_int = function I i -> i | Ret -> -1
+  end
+
   module Map = PatriciaTree.MakeMap (JumpKey)
 
   type 'a t = 'a Map.t
@@ -77,23 +89,11 @@ end
 
 (*=========================================================================*)
 
-let pp_l fmt { form; ty; code } =
-  Fmt.pf fmt "(%s %a %s)"
-    (match form with Block -> "b" | Loop -> "l" | Func -> "f")
-    Binary.pp_func_type ty
-    (if List.length code > 0 then "I" else "[]")
-
-let pp_map = Locals.pretty (fun fmt k v -> Fmt.pf fmt "%i->%a" k Value.pp v)
-
-let print_state (state : state) =
-  let stack, rho = state in
-  Fmt.pr "@[<hov>σ:[%a];@;ρ:%a@]@." Stack.pp stack pp_map rho
-
 let rec input_loop state =
   match In_channel.input_line In_channel.stdin with
   | None | Some "n" | Some "" -> ()
   | Some "p" ->
-    print_state state;
+    Log.debug (fun m -> m "%a" State.pp state);
     input_loop state
   | Some "q" -> exit 0
   | _ ->
@@ -156,7 +156,9 @@ let eval_local (stack, rho) : Binary.local_instr -> _ = function
 let join lhs rhs = match rhs with Some x -> Some x | None -> lhs
 
 let rec eval_expr :
-  state -> Binary.instr Annotated.t list -> state option * state JumpTarget.t =
+     State.t
+  -> Binary.instr Annotated.t list
+  -> State.t option * State.t JumpTarget.t =
  fun state expr ->
   let rec loop (state, jt) (expr : Binary.instr Annotated.t list) =
     match expr with
@@ -172,7 +174,8 @@ let rec eval_expr :
   in
   loop (state, JumpTarget.empty) expr
 
-and eval_instr : state -> Binary.instr -> state option * state JumpTarget.t =
+and eval_instr :
+  State.t -> Binary.instr -> State.t option * State.t JumpTarget.t =
  fun state instr ->
   let stack, rho = state in
   match instr with
