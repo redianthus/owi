@@ -113,8 +113,11 @@ module DenotFixpoint (S : DATA_STATE) = struct
          * cont : continuation function
          *)
         let (D.Context.Result (inc, in_tup, local_cont)) =
-          D.serialize_binary ~size ~widens state_a.ctx (Abstract_value.to_binary a)
-            state_b.ctx (Abstract_value.to_binary b) (inc, intup)
+          D.serialize_binary ~size ~widens state_a.ctx
+            (Abstract_value.to_binary a)
+            state_b.ctx
+            (Abstract_value.to_binary b)
+            (inc, intup)
         in
         let cont ctx out_tuple =
           let integer, out_tuple = local_cont ctx out_tuple in
@@ -144,8 +147,12 @@ module DenotFixpoint (S : DATA_STATE) = struct
             | Some v -> Abstract_value.size_of v
             | None -> assert false
           in
-          let v1 = Option.value v1 ~default:(Abstract_value.top size state_a.ctx) in
-          let v2 = Option.value v2 ~default:(Abstract_value.top size state_b.ctx) in
+          let v1 =
+            Option.value v1 ~default:(Abstract_value.top size state_a.ctx)
+          in
+          let v2 =
+            Option.value v2 ~default:(Abstract_value.top size state_b.ctx)
+          in
           let f = Locals.add k in
           match gen_new_value ~widens v1 v2 state_a state_b res f with
           | Some res -> res
@@ -403,7 +410,9 @@ module DataState : DATA_STATE = struct
     (* TODO vérifier les overflows *)
     let binop stack size op =
       let e1, e2, stack = Stack.pop_2 stack in
-      let lhs, rhs = (Abstract_value.to_binary e1, Abstract_value.to_binary e2) in
+      let lhs, rhs =
+        (Abstract_value.to_binary e1, Abstract_value.to_binary e2)
+      in
       let bin_res = op lhs rhs in
       let r = Abstract_value.of_binary size bin_res in
       let stack = Stack.push stack r in
@@ -440,7 +449,9 @@ module DataState : DATA_STATE = struct
   module Relop = struct
     let relop ?(not = None) state size op =
       let e1, e2, stack = Stack.pop_2 state.stack in
-      let lhs, rhs = (Abstract_value.to_binary e1, Abstract_value.to_binary e2) in
+      let lhs, rhs =
+        (Abstract_value.to_binary e1, Abstract_value.to_binary e2)
+      in
       let bool_res = op lhs rhs in
       let bool_res =
         match not with
