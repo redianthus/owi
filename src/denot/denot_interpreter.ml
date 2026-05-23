@@ -104,37 +104,27 @@ let option_get = function Some x -> x | None -> assert false [@@inline]
 
 (*=========================================================================*)
 
-let i32_binop stack op =
-  let (i1, i2), stack = Stack.pop2_i32 stack in
-  let v = op i1 i2 in
-  Stack.push_i32 stack v
-
 let eval_i32 (stack, rho) : Binary.i32_instr -> _ = function
   | Binary.Const i ->
-    let stack = Stack.push stack (I32 i) in
+    let stack = Stack.push_i32 stack i in
     (stack, rho)
   | Add ->
-    let stack = i32_binop stack Int32.add in
+    let stack = Stack.apply_i32_i32_i32 stack Value.I32.add in
     (stack, rho)
   | Sub ->
-    let stack = i32_binop stack Int32.sub in
+    let stack = Stack.apply_i32_i32_i32 stack Value.I32.sub in
     (stack, rho)
   | _ -> assert false
 
-let i64_binop stack op =
-  let (i1, i2), stack = Stack.pop2_i64 stack in
-  let v = op i1 i2 in
-  Stack.push_i64 stack v
-
 let eval_i64 (stack, rho) : Binary.i64_instr -> _ = function
   | Binary.Const i ->
-    let stack = Stack.push stack (I64 i) in
+    let stack = Stack.push_i64 stack i in
     (stack, rho)
   | Add ->
-    let stack = i64_binop stack Int64.add in
+    let stack = Stack.apply_i64_i64_i64 stack Value.I64.add in
     (stack, rho)
   | Sub ->
-    let stack = i64_binop stack Int64.sub in
+    let stack = Stack.apply_i64_i64_i64 stack Value.I64.sub in
     (stack, rho)
   | _ -> assert false
 
