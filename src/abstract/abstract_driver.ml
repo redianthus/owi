@@ -402,7 +402,7 @@ end
 
 (*===========================================================================*)
 
-module DataState : DATA_STATE = struct
+module Data_state : DATA_STATE = struct
   (*TODO on peut utiliser une exception*)
   type t = state option * instr option
 
@@ -570,7 +570,7 @@ module DataState : DATA_STATE = struct
         (pp_instr ~short:true) instr
 end
 
-module ConcreteFixpoint = DenotFixpoint (DataState)
+module ConcreteFixpoint = DenotFixpoint (Data_state)
 
 let expr (link_state : Abstract_extern_func.extern_func Link.State.t)
   (m : Abstract_extern_func.extern_func Linked.Module.t) =
