@@ -35,8 +35,8 @@ module State = struct
   let pp_map = Locals.pretty (fun fmt k v -> Fmt.pf fmt "%i->%a" k Value.pp v)
 
   let pp ppf (state : t) =
-    let stack, rho = state in
-    Fmt.pf ppf "@[<hov>σ:[%a];@;ρ:%a@]@." Stack.pp stack pp_map rho
+    let stack, locals = state in
+    Fmt.pf ppf "@[<hov>σ:[%a];@;ρ:%a@]@." Stack.pp stack pp_map locals
 end
 
 module JumpTarget = struct
@@ -104,44 +104,44 @@ let option_get = function Some x -> x | None -> assert false [@@inline]
 
 (*=========================================================================*)
 
-let eval_i32 (stack, rho) : Binary.i32_instr -> _ = function
+let eval_i32 (stack, locals) : Binary.i32_instr -> _ = function
   | Binary.Const i ->
     let stack = Stack.push_i32 stack i in
-    (stack, rho)
+    (stack, locals)
   | Add ->
     let stack = Stack.apply_i32_i32_i32 stack Value.I32.add in
-    (stack, rho)
+    (stack, locals)
   | Sub ->
     let stack = Stack.apply_i32_i32_i32 stack Value.I32.sub in
-    (stack, rho)
+    (stack, locals)
   | _ -> assert false
 
-let eval_i64 (stack, rho) : Binary.i64_instr -> _ = function
+let eval_i64 (stack, locals) : Binary.i64_instr -> _ = function
   | Binary.Const i ->
     let stack = Stack.push_i64 stack i in
-    (stack, rho)
+    (stack, locals)
   | Add ->
     let stack = Stack.apply_i64_i64_i64 stack Value.I64.add in
-    (stack, rho)
+    (stack, locals)
   | Sub ->
     let stack = Stack.apply_i64_i64_i64 stack Value.I64.sub in
-    (stack, rho)
+    (stack, locals)
   | _ -> assert false
 
-let eval_local (stack, rho) : Binary.local_instr -> _ = function
+let eval_local (stack, locals) : Binary.local_instr -> _ = function
   | Get i -> (
-    match Locals.find_opt i rho with
+    match Locals.find_opt i locals with
     | None -> Fmt.failwith "local.get: local %i is not set" i
-    | Some v -> (v :: stack, rho) )
+    | Some v -> (v :: stack, locals) )
   | Set i ->
     let v, stack = Stack.pop stack in
-    let rho = Locals.add i v rho in
-    (stack, rho)
+    let locals = Locals.add i v locals in
+    (stack, locals)
   | Tee i ->
     let v, stack = Stack.pop stack in
-    let rho = Locals.add i v rho in
+    let locals = Locals.add i v locals in
     let stack = Stack.push stack v in
-    (stack, rho)
+    (stack, locals)
 
 let join lhs rhs = match rhs with Some x -> Some x | None -> lhs
 
@@ -167,13 +167,13 @@ let rec eval_expr :
 and eval_instr :
   State.t -> Binary.instr -> State.t option * State.t JumpTarget.t =
  fun state instr ->
-  let stack, rho = state in
+  let stack, locals = state in
   match instr with
   | Binary.I32 instr -> (Some (eval_i32 state instr), JumpTarget.empty)
   | Binary.I64 instr -> (Some (eval_i64 state instr), JumpTarget.empty)
   | Drop ->
     let _, stack = Stack.pop stack in
-    (Some (stack, rho), JumpTarget.empty)
+    (Some (stack, locals), JumpTarget.empty)
   | Unreachable -> (None, JumpTarget.empty)
   | Block (_str_opt, _bt, body) ->
     let res, mapping = eval_expr state body.raw in
@@ -184,13 +184,13 @@ and eval_instr :
   | If_else (str_opt, bt, expr_then, expr_else) -> (
     let v, stack = Stack.pop stack in
     match v with
-    | I32 0l -> eval_instr (stack, rho) (Block (str_opt, bt, expr_else))
-    | _ -> eval_instr (stack, rho) (Block (str_opt, bt, expr_then)) )
+    | I32 0l -> eval_instr (stack, locals) (Block (str_opt, bt, expr_else))
+    | _ -> eval_instr (stack, locals) (Block (str_opt, bt, expr_then)) )
   | Br i -> (None, JumpTarget.of_list [ (I i, state) ])
   | Br_if id -> (
     let v, stack = Stack.pop stack in
     match v with
-    | I32 0l -> (Some (stack, rho), JumpTarget.empty)
+    | I32 0l -> (Some (stack, locals), JumpTarget.empty)
     | _ ->
       (* br i *)
       (None, JumpTarget.of_list [ (I id, state) ]) )
@@ -204,7 +204,7 @@ and eval_instr :
     in
     let matched = Array.find_index (fun case -> case = v_int) cases in
     let jt = match matched with Some i -> i | None -> default in
-    (None, JumpTarget.of_list [ (I jt, (stack, rho)) ])
+    (None, JumpTarget.of_list [ (I jt, (stack, locals)) ])
   | Return -> (None, JumpTarget.of_list [ (Ret, state) ])
   | instr ->
     Fmt.failwith "TODO implement instr %a@\n"
