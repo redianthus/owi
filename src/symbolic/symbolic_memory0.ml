@@ -2,11 +2,16 @@
 (* Copyright © 2021-2026 OCamlPro *)
 (* Written by the Owi programmers *)
 
-module Map = Map.Make (Int32)
+type write =
+  { addr : Symbolic_i32.t
+  ; value : Smtml.Typed.Bitv8.t
+  }
+
+module Int32Map = Map.Make (Int32)
 
 type t =
-  { data : Smtml.Typed.Bitv8.t Map.t
-  ; chunks : Symbolic_i32.t Map.t
+  { writes : write list
+  ; chunks : Symbolic_i32.t Int32Map.t
   ; size : Symbolic_i32.t
   ; env_id : int
   ; id : int
